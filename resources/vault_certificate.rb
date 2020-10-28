@@ -3,6 +3,7 @@ provides :vault_certificate
 
 require 'vault'
 require 'openssl'
+require 'date'
 
 default_action :create
 
@@ -21,6 +22,8 @@ property :output_certificates, [true, false], default: true
 # and key exist in the file system and if the certificate is still valid. Only when the certificate is invalid (probably
 # because it has expired) will vault certificate ask Vault for a certificate.
 property :always_ask_vault, [true, false], default: lazy { node['vault_certificate']['always_ask_vault'] }
+# If set to true vault-certificate will ask Vault for a certificate at the half way point of the certificate time to live
+property :renew_certificate, [true, false], default: lazy { node['vault_certificate']['renew_certificate'] }
 # ======================================================================================================================
 # == Certificate bundles properties ====================================================================================
 # ======================================================================================================================
@@ -329,7 +332,9 @@ action :create do
   if new_resource.always_ask_vault == false && ::File.file?(key) && ::File.file?(certificate)
     cert = x509_certificate
     name = cert.subject.to_a.select { |a| a.first == 'CN' }.first[1]
-    if (cert.not_after > Time.now) && (cert.not_before < Time.now) && (name == new_resource.common_name)
+    if new_resource.renew_certificate == true && Time.now.to_datetime > Time.at((cert.not_after.to_i - cert.not_before.to_i) / 2 + cert.not_before.to_i).to_datetime
+      Chef::Log.info('[vault-certificate] the certificate is passed its half life, renewing certificate')
+    elsif (cert.not_after > Time.now) && (cert.not_before < Time.now) && (name == new_resource.common_name)
       Chef::Log.info('[vault-certificate] the certificate is still valid, not going to ask Vault for a new one')
       return
     end

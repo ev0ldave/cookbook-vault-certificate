@@ -92,6 +92,8 @@ See the list of properties bellow.
                          the certificate and key exist in the file system and if the certificate is still valid.
                          Only when the certificate is invalid (probably because it has expired) will vault_certificate ask Vault for a certificate.
                          Default: false.
+  - `renew_certificate` - If set to true vault-certificate will ask Vault to renew a certificate at the half way point of the certificate's time to live.
+                          Default: false.
 
 #### Certificate bundles properties
 
